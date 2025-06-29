@@ -8,44 +8,63 @@ from datetime import datetime
 
 # —————————————————————————————
 # 1) Settings
-SYMBOLS    = ["BTC/USDT", "ETH/USDT", "BNB/USDT", "XRP/USDT"]  # your list
+SYMBOLS    = ["BTC/USDT", "ETH/USDT", "BNB/USDT", "XRP/USDT"]
 TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"]
 
-# (optional—you can leave these unused if spot/kline is public)
-API_KEY    = os.environ.get("BITUNIX_API_KEY", "")
-API_SECRET = os.environ.get("BITUNIX_API_SECRET", "")
+# (API-Key/Secret لازم نیست مگر برای private endpoints)
+# API_KEY    = os.environ.get("BITUNIX_API_KEY", "")
+# API_SECRET = os.environ.get("BITUNIX_API_SECRET", "")
+API_KEY    = "7552c5d6c43d357a0308a220abdc7ab2"
+API_SECRET = "e3bbd077fec52bf301f78838ecf51a6e"
 
-FLAT_LEN = 3    # bars for flat
-LOOK_FWD = 51   # look-forward window (bars)
+FLAT_LEN = 3    # bars to define flat
+LOOK_FWD = 51   # look-forward window in bars
 
 # —————————————————————————————
-# 2) Fetch OHLCV from BitUnix Spot API
+# 2) Fetch OHLCV from Bitunix Spot API
 def fetch_ohlcv_bitunix(symbol: str, interval: str, limit: int = 200) -> pd.DataFrame:
     """
-    GET https://fapi.bitunix.com/api/spot/v1/market/kline
-    Public spot kline: symbol (BTCUSDT), interval (1m,5m,15m,1h,4h,1d), limit
+    Public spot kline endpoint:
+      GET https://api.bitunix.com/api/spot/v1/market/kline
+    params:
+      symbol:   e.g. "BTCUSDT"
+      interval: "1m","5m","15m","1h","4h","1d"
+      limit:    up to 500
+    returns DataFrame indexed by ts with open, high, low, close, volume
     """
-    url = "https://fapi.bitunix.com/api/spot/v1/market/kline"
+    url = "https://api.bitunix.com/api/spot/v1/market/kline"
     headers = {
-        # If your spot endpoint requires auth, uncomment:
+        # اگر این endpoint نیاز به auth داشته باشد، uncomment:
         # "X-API-KEY":    API_KEY,
         # "X-API-SECRET": API_SECRET,
     }
     params = {
-        "symbol":   symbol.replace("/", ""),  # e.g. "BTCUSDT"
-        "interval": interval,                 # "1m", "5m", "1h", "4h", "1d"
+        "symbol":   symbol.replace("/", ""),  # BTCUSDT
+        "interval": interval,
         "limit":    limit,
     }
-    res = requests.get(url, headers=headers, params=params)
-    res.raise_for_status()
-    data = res.json()
-    # data is a list of dicts: [{"openTime":…, "open":…, "high":…, "low":…, "close":…, "volume":…}, …]
-    df = pd.DataFrame(data["data"] if "data" in data else data)
-    df["ts"] = pd.to_datetime(df.get("openTime", df.get("time")), unit="ms")
+    resp = requests.get(url, headers=headers, params=params)
+    resp.raise_for_status()
+    payload = resp.json()
+    data = payload.get("data", [])
+    if not data:
+        raise ValueError(f"No data returned for {symbol}@{interval}")
+    df = pd.DataFrame(data)
+    # some fields may be string, cast:
+    for col in ("open","high","low","close","volume"):
+        if col in df.columns:
+            df[col] = df[col].astype(float)
+    # timestamp:
+    if "ts" in df.columns:
+        df["ts"] = pd.to_datetime(df["ts"])
+    elif "time" in df.columns:
+        df["ts"] = pd.to_datetime(df["time"], unit="ms")
+    else:
+        df["ts"] = pd.to_datetime(df["openTime"], unit="ms")
     df.set_index("ts", inplace=True)
-    # ensure column names:
-    df.columns = [c.lower() for c in df.columns]
-    return df[["open", "high", "low", "close", "volume"]]
+    # keep only necessary cols
+    cols = [c for c in ("open","high","low","close","volume") if c in df.columns]
+    return df[cols]
 
 # —————————————————————————————
 # 3) Ichimoku Flat–Hit logic
@@ -65,7 +84,7 @@ def calc_flat_hit(df: pd.DataFrame) -> bool:
 
     for ts in anchor[anchor].index:
         window = df.loc[ts : ts + pd.Timedelta(
-            minutes=LOOK_FWD * df.index.freq.delta.seconds/60
+            minutes=LOOK_FWD * (df.index.freq.delta.seconds / 60)
         )]
         if ((window["high"] >= kijun[ts]) & (window["low"] <= kijun[ts])).any():
             return True
@@ -75,7 +94,7 @@ def calc_flat_hit(df: pd.DataFrame) -> bool:
 # 4) Streamlit UI
 st.set_page_config(page_title="Ichimoku Flat–Hit Scanner", layout="wide")
 st.title("🔍 Ichimoku Flat–Hit Scanner")
-st.write(f"Scanning {len(SYMBOLS)} symbols × {len(TIMEFRAMES)} timeframes")
+st.write(f"Scanning **{len(SYMBOLS)}** symbols × **{len(TIMEFRAMES)}** timeframes")
 
 if st.button("🔄 Run Scan now"):
     results = []
@@ -84,7 +103,7 @@ if st.button("🔄 Run Scan now"):
             try:
                 df = fetch_ohlcv_bitunix(sym, tf, limit=200)
             except Exception as e:
-                st.error(f"Error fetching {sym} @ {tf}: {e}")
+                st.error(f"Error fetching {sym}@{tf}: {e}")
                 continue
             hit = calc_flat_hit(df)
             results.append({"symbol": sym, "tf": tf, "signal": "✔" if hit else ""})
@@ -95,7 +114,6 @@ if st.button("🔄 Run Scan now"):
     else:
         pivot = df_res.pivot("symbol", "tf", "signal").fillna("")
         st.dataframe(pivot, use_container_width=True)
-
-    st.write(f"Last run: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC")
+    st.write(f"Last run: {datetime.utcnow():%Y-%m-%d %H:%M:%S} UTC")
 else:
     st.info("Press **Run Scan now** to start scanning.")
