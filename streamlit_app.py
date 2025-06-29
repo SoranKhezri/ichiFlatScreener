@@ -32,7 +32,16 @@ st.title("🔍 Ichimoku Flat–Hit Scanner")
 st.write(f"Scan {len(SYMBOLS)} symbols × {len(TIMEFRAMES)} timeframes")
 
 if st.button("🔄 Run Scan now"):
-    exchange = ccxt.binance({"enableRateLimit": True})
+
+    # try Binance first, if it's geo-blocked switch to Bybit  
+    import ccxt  
+    try:  
+        exchange = ccxt.binance({ "enableRateLimit": True })  
+        exchange.load_markets()  
+    except Exception:  
+        exchange = ccxt.bybit({ "enableRateLimit": True })  
+        exchange.load_markets()  
+    
     results = []
     for sym in SYMBOLS:
         for tf in TIMEFRAMES:
