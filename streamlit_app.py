@@ -18,11 +18,11 @@ LOOK_FWD = 51   # look‐forward window in bars
 # 2) Fetch OHLCV from Bitunix public Spot K-Line endpoint
 def fetch_ohlcv_bitunix(symbol: str, interval: str, limit: int = 200) -> pd.DataFrame:
     """
-    GET https://fapi.bitunix.com/api/spot/v1/market/kline
+    GET https://openapi.bitunix.com
     public interface – no API key required.
     Returns DataFrame indexed by ts with columns open, high, low, close, (volume if present).
     """
-    url = "https://fapi.bitunix.com/api/spot/v1/market/kline"
+    url = "https://openapi.bitunix.com"
     params = {
         "symbol":   symbol.replace("/", ""),  # e.g. "BTCUSDT"
         "interval": interval,                 # "1m","5m","15m","1h","4h","1d"
