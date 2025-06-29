@@ -45,9 +45,9 @@ def bitunix_headers(params: dict) -> dict:
 
 def fetch_ohlcv_bitunix(symbol: str, interval: str, limit: int = 200) -> pd.DataFrame:
     """
-    GET https://fapi.bitunix.com/api/spot/v1/market/kline
+    GET https://openapi.bitunix.com
     """
-    base_url = "https://fapi.bitunix.com/api/spot/v1/market/kline"
+    base_url = "https://openapi.bitunix.com"
     params = {
         "symbol":   symbol.replace("/", ""),  # BTCUSDT
         "interval": interval,                 # 1m,5m,15m,1h,4h,1d
@@ -55,7 +55,6 @@ def fetch_ohlcv_bitunix(symbol: str, interval: str, limit: int = 200) -> pd.Data
     }
     headers = bitunix_headers(params)
     resp = requests.get(base_url, headers=headers, params=params)
-    print(resp)
     resp.raise_for_status()
     payload = resp.json()
     data = payload.get("data", [])
