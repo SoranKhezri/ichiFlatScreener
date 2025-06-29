@@ -33,7 +33,7 @@ st.write(f"Scan {len(SYMBOLS)} symbols × {len(TIMEFRAMES)} timeframes")
 
 if st.button("🔄 Run Scan now"):
 
-    # try Binance first, if it's geo-blocked switch to Bybit  
+    # bitunix API
     import ccxt
     import os
     exchange = ccxt.bitunix({
@@ -41,7 +41,7 @@ if st.button("🔄 Run Scan now"):
         "secret": os.environ['BITUNIX_API_SECRET'],
         "enableRateLimit": True,
     })
-exchange.load_markets()
+    exchange.load_markets()
     
     results = []
     for sym in SYMBOLS:
