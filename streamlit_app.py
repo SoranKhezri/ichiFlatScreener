@@ -55,6 +55,7 @@ def fetch_ohlcv_bitunix(symbol: str, interval: str, limit: int = 200) -> pd.Data
     }
     headers = bitunix_headers(params)
     resp = requests.get(base_url, headers=headers, params=params)
+    print(resp)
     resp.raise_for_status()
     payload = resp.json()
     data = payload.get("data", [])
