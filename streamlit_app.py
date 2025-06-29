@@ -6,7 +6,6 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime
 
-# —————————————————————————————
 # 1) Settings
 SYMBOLS    = ["BTC/USDT", "ETH/USDT", "BNB/USDT", "XRP/USDT"]
 TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"]
@@ -17,13 +16,8 @@ API_SECRET = os.environ["BITUNIX_API_SECRET"]
 FLAT_LEN = 3    # bars for flat
 LOOK_FWD = 51   # look-forward window (bars)
 
-# —————————————————————————————
 # 2) Fetch OHLCV from BitUnix REST API
 def fetch_ohlcv_bitunix(symbol: str, interval: str, limit: int = 200) -> pd.DataFrame:
-    """
-    Calls https://fapi.bitunix.com/spot/market/kline
-    Returns DataFrame indexed by timestamp with open, high, low, close, volume.
-    """
     url = "https://fapi.bitunix.com/spot/market/kline"
     headers = {
         "api-key":    API_KEY,
@@ -36,13 +30,12 @@ def fetch_ohlcv_bitunix(symbol: str, interval: str, limit: int = 200) -> pd.Data
     }
     res = requests.get(url, headers=headers, params=params)
     res.raise_for_status()
-    data = res.json()  # expect list of dicts with openTime, open, high, low, close, volume
+    data = res.json()
     df = pd.DataFrame(data)
     df["ts"] = pd.to_datetime(df["openTime"], unit="ms")
     df.set_index("ts", inplace=True)
     return df[["open", "high", "low", "close", "volume"]]
 
-# —————————————————————————————
 # 3) Ichimoku Flat–Hit logic
 def calc_flat_hit(df: pd.DataFrame) -> bool:
     high26  = df["high"].rolling(26).max()
@@ -68,7 +61,6 @@ def calc_flat_hit(df: pd.DataFrame) -> bool:
             break
     return hit
 
-# —————————————————————————————
 # 4) Streamlit UI
 st.set_page_config(page_title="Ichimoku Flat–Hit Scanner", layout="wide")
 st.title("🔍 Ichimoku Flat–Hit Scanner")
@@ -92,7 +84,6 @@ if st.button("🔄 Run Scan now"):
     else:
         pivot = df_res.pivot("symbol", "tf", "signal").fillna("")
         st.dataframe(pivot, use_container_width=True)
-
     st.write(f"Last run: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC")
 else:
     st.info("Press **Run Scan now** to start scanning.")
