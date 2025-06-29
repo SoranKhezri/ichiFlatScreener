@@ -12,8 +12,8 @@ TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"]
 
 # API_KEY    = os.environ["BITUNIX_API_KEY"]
 # API_SECRET = os.environ["BITUNIX_API_SECRET"]
-API_KEY    = 7552c5d6c43d357a0308a220abdc7ab2
-API_SECRET = e3bbd077fec52bf301f78838ecf51a6e
+API_KEY    = "7552c5d6c43d357a0308a220abdc7ab2"
+API_SECRET = "e3bbd077fec52bf301f78838ecf51a6e"
 
 FLAT_LEN = 3    # bars for flat
 LOOK_FWD = 51   # look-forward window (bars)
