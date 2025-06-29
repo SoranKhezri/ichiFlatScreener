@@ -15,6 +15,10 @@ TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"]
 API_KEY    = "7552c5d6c43d357a0308a220abdc7ab2"
 API_SECRET = "e3bbd077fec52bf301f78838ecf51a6e"
 
+# اگر هنوز کلیدت را نذاشتی، اخطار بده و اجراتو متوقف کن
+if not API_KEY or API_KEY.startswith("<PASTE"):
+    raise RuntimeError("🔑 Please set BITUNIX_API_KEY & BITUNIX_API_SECRET either in env vars or directly in code")
+
 FLAT_LEN = 3
 LOOK_FWD = 51
 
